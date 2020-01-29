@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "build": "rm -rf dist && npm run build-compile && npm run build-resources",
+    "build-compile": "tsc",
+    "build-resources": "cdk synthesize --app \"node dist/infrastructure.js\" --output dist/cdk.out",
+    "deploy": "npm run build && AWS_REGION=us-west-2 AWS_PROFILE=munchii npm run deploy-resources",
+    "deploy-resources": "cdk deploy --app \"node dist/infrastructure.js\" --output dist/cdk.out"
+  },
+  "devDependencies": {
+    "@aws-cdk/aws-s3": "1.22.0",
+    "@aws-cdk/aws-codebuild": "1.22.0",
+    "@aws-cdk/core": "1.22.0",
+    "@types/node": "12.12.14",
+    "aws-cdk": "1.22.0",
+    "source-map-support": "0.5.16",
+    "typescript": "3.7.2"
+  }
+}

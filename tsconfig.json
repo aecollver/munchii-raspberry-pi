@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "target": "esnext",
+    "lib": [
+      "esnext"
+    ],
+    "outDir": "dist"
+  },
+}
