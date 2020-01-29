@@ -1,4 +1,4 @@
-import { Artifacts, BuildSpec, ComputeType, LinuxBuildImage, Project, Source } from "@aws-cdk/aws-codebuild";
+import { Artifacts, ComputeType, LinuxBuildImage, Project, Source } from "@aws-cdk/aws-codebuild";
 import { Bucket } from "@aws-cdk/aws-s3";
 import { App, Construct, Stack, StackProps } from "@aws-cdk/core";
 import "source-map-support/register";
@@ -28,7 +28,14 @@ class RaspberryPiStack extends Stack {
       source: Source.gitHub({
         owner: "aecollver",
         repo: "munchii-raspberry-pi"
-      })
+      }),
+      secondarySources: [
+        Source.gitHub({
+          owner: "aecollver",
+          repo: "munchii-daemon",
+          identifier: "DAEMON"
+        })
+      ]
     });
   }
 }
