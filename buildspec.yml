@@ -4,25 +4,74 @@ phases:
   install:
     runtime-versions:
       nodejs: 12
+    commands:
+      - yum install parted --assumeyes
+        # Download a Rasberry Pi image
+      - mkdir -p base_image/mount
+      - aws s3 cp --quiet s3://raspberry-pi-imagebucket97210811-7l2bygvw8ufl/raspbian_lite_latest base_image/.
+      - unzip base_image/raspbian_lite_latest -d base_image
+      - RASPBERRY_PI_BASE_IMAGE=`pwd`/`ls base_image/*.img`
+      - let RASPBERRY_PI_IMG1_START=`fdisk -l base_image/*.img | grep ".img1" | awk '{print $2}'`*512
+      - let RASPBERRY_PI_IMG2_START=`fdisk -l base_image/*.img | grep ".img2" | awk '{print $2}'`*512
+  pre_build:
+    commands:
+        # Modify the CodeBuild environment
+      - mknod /dev/loop0 b 7 0
+        # Make the image bigger, update it and install Node (needed later by the build environment and final image)
+      - dd if=/dev/zero bs=1M count=1024 >> $RASPBERRY_PI_BASE_IMAGE
+      - parted $RASPBERRY_PI_BASE_IMAGE "resizepart 2 -1"
+      - mount --verbose --options offset=$RASPBERRY_PI_IMG2_START $RASPBERRY_PI_BASE_IMAGE base_image/mount
+      - resize2fs /dev/loop0
+      - |
+          chroot base_image/mount /bin/sh << "EOF"
+          curl -sL https://deb.nodesource.com/setup_12.x | bash -
+          apt-get install nodejs --assume-yes --quiet
+          apt-get update --quiet
+          apt-get upgrade --assume-yes
+          apt-get autoremove --assume-yes
+          EOF
+      - umount base_image/mount
+        # Create a temporary build environment
+      - mkdir -p tool_image/mount
+      - cp $RASPBERRY_PI_BASE_IMAGE tool_image/image
+      - mount --verbose --options offset=$RASPBERRY_PI_IMG2_START tool_image/image tool_image/mount
+      - mkdir tool_image/mount/munchii_daemon_source
+      - cp -r $CODEBUILD_SRC_DIR_DAEMON/* tool_image/mount/munchii_daemon_source/.
+        # https://wiki.archlinux.org/index.php/Chroot
+      - mount -t proc proc tool_image/mount/proc/
+      - mount --rbind /sys tool_image/mount/sys/
+      - mount --rbind /dev tool_image/mount/dev/
+      - |
+          chroot tool_image/mount /bin/sh << "EOF"
+          apt-get install debhelper devscripts dh-systemd --assume-yes --quiet
+          cd munchii_daemon_source
+          npm install
+          npm run package
+          EOF
+      - cp tool_image/mount/munchii_daemon_source/dist/munchiid*.deb .
+      - umount --recursive --force tool_image/mount
   build:
     commands:
-      - pushd $CODEBUILD_SRC_DIR_DAEMON
-      - npm install
-      - npm run package
-      - popd
-      # - wget --progress=dot:mega https://downloads.raspberrypi.org/raspbian_lite_latest
-      # - unzip raspbian_lite_latest
-      # - mkdir pi_image
-      # - mknod /dev/loop0 b 7 0
-      # - mount --verbose --options offset=272629760 2019-09-26-raspbian-buster-lite.img pi_image
-      # - |
-      #     chroot pi_image /bin/sh << "EOF"
-      #     apt-get update --assume-yes
-      #     apt-get upgrade --assume-yes
-      #     apt-get autoremove --assume-yes
-      #     EOF
-      # - umount pi_image
+        # Create the final image
+      - mkdir -p final_image/mount
+      - cp $RASPBERRY_PI_BASE_IMAGE final_image/munchii.img
+        # Set up boot partition
+      - mount --verbose --options offset=$RASPBERRY_PI_IMG1_START final_image/munchii.img final_image/mount
+      - touch final_image/mount/ssh
+      - umount final_image/mount
+        # Set up the system partition
+      - mount --verbose --options offset=$RASPBERRY_PI_IMG2_START final_image/munchii.img final_image/mount
+      - cp munchiid*.deb final_image/mount/.
+      # TODO: Don't create images for n99kpnmsftmg4i94fn17ompf78
+      - cp -r $CODEBUILD_SRC_DIR_DAEMON/n99kpnmsftmg4i94fn17ompf78/. final_image/mount/etc/munchiid
+      - |
+          chroot final_image/mount /bin/sh << "EOF"
+          apt-get install --reinstall --assume-yes /munchiid*.deb
+          rm /munchiid*.deb
+          wpa_passphrase "Jiuzhaigou" "amazon.com" >> /etc/wpa_supplicant/wpa_supplicant.conf
+          EOF
+      - umount final_image/mount
 
 artifacts:
   files:
-    - "2019-09-26-raspbian-buster-lite.img"
+    - "final_image/munchii.img"
