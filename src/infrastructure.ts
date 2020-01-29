@@ -1,4 +1,4 @@
-import { Artifacts, BuildSpec, ComputeType, LinuxBuildImage, Project } from "@aws-cdk/aws-codebuild";
+import { Artifacts, BuildSpec, ComputeType, LinuxBuildImage, Project, Source } from "@aws-cdk/aws-codebuild";
 import { Bucket } from "@aws-cdk/aws-s3";
 import { App, Construct, Stack, StackProps } from "@aws-cdk/core";
 import "source-map-support/register";
@@ -25,31 +25,9 @@ class RaspberryPiStack extends Stack {
         bucket: artifactBucket,
         name: "munchii.zip"
       }),
-      buildSpec: BuildSpec.fromObject({
-        version: '0.2',
-        phases: {
-          install: {
-            "runtime-versions": {
-              nodejs: 12
-            }
-          },
-          build: {
-            commands: [
-              "wget --progress=dot:mega https://downloads.raspberrypi.org/raspbian_lite_latest",
-              "unzip raspbian_lite_latest",
-              "mkdir pi_image",
-              "mknod /dev/loop0 b 7 0",
-              "mount --verbose --options offset=272629760 2019-09-26-raspbian-buster-lite.img pi_image",
-              `chroot pi_image /bin/sh <<"EOF"\n${chrootCommands.join("\n")}\nEOF`,
-              "umount pi_image"
-            ]
-          }
-        },
-        artifacts: {
-          files: [
-            "2019-09-26-raspbian-buster-lite.img"
-          ]
-        }
+      source: Source.gitHub({
+        owner: "aecollver",
+        repo: "munchii-raspberry-pi"
       })
     });
   }
