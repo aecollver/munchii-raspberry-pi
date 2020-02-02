@@ -1,13 +1,7 @@
-import { Artifacts, ComputeType, LinuxBuildImage, Project, Source } from "@aws-cdk/aws-codebuild";
-import { Bucket } from "@aws-cdk/aws-s3";
+import { Artifacts, ArtifactsConfig, ArtifactsProps, ComputeType, IProject, LinuxBuildImage, Project, Source } from "@aws-cdk/aws-codebuild";
+import { Bucket, IBucket } from "@aws-cdk/aws-s3";
 import { App, Construct, Stack, StackProps } from "@aws-cdk/core";
 import "source-map-support/register";
-
-const chrootCommands = [
-  "apt-get update --assume-yes",
-  "apt-get upgrade --assume-yes",
-  "apt-get autoremove --assume-yes"
-];
 
 class RaspberryPiStack extends Stack {
   constructor(scope: Construct, name: string, props: StackProps) {
@@ -21,9 +15,8 @@ class RaspberryPiStack extends Stack {
         computeType: ComputeType.LARGE,
         privileged: true
       },
-      artifacts: Artifacts.s3({
-        bucket: artifactBucket,
-        name: "munchii.zip"
+      artifacts: new NameFromBuildSpec({
+        bucket: artifactBucket
       }),
       source: Source.gitHub({
         owner: "aecollver",
@@ -38,6 +31,33 @@ class RaspberryPiStack extends Stack {
       ]
     });
   }
+}
+
+interface NameFromBuildSpecProps extends ArtifactsProps {
+  bucket: IBucket
+}
+
+class NameFromBuildSpec extends Artifacts {
+  public readonly type: string = "S3";
+
+  constructor(private props: NameFromBuildSpecProps) {
+    super(props);
+  }
+
+  public bind(_scope: Construct, project: IProject): ArtifactsConfig {
+    this.props.bucket.grantReadWrite(project.role);
+
+    return {
+      artifactsProperty: {
+        type: this.type,
+        location: this.props.bucket.bucketName,
+        packaging: "ZIP",
+        overrideArtifactName: true,
+        namespaceType: "NONE",
+        name: project.projectName
+      }
+    };
+  };
 }
 
 const app = new App();
