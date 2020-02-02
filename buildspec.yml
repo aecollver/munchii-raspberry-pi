@@ -72,8 +72,12 @@ phases:
           wpa_passphrase "Jiuzhaigou" "amazon.com" >> /etc/wpa_supplicant/wpa_supplicant.conf
           EOF
       - umount --recursive final_image/mount
+        # Create dist
+      - mkdir dist
+      - mv final_image/munchii.img dist/$(date --iso-8601=date)-munchii-${CODEBUILD_BUILD_NUMBER}.img
 
 artifacts:
   files:
-    - munchii.img
-  base-directory: final_image
+    - "**/*"
+  name: $(date --iso-8601=date)-munchii-${CODEBUILD_BUILD_NUMBER}.zip
+  base-directory: dist
