@@ -25,9 +25,8 @@ phases:
       - mount --verbose --options offset=$RASPBERRY_PI_IMG1_START,sizelimit=$RASPBERRY_PI_IMG1_SIZE $RASPBERRY_PI_BASE_IMAGE base_image/mount/boot
       - |
           chroot base_image/mount /bin/sh << "EOF"
-          curl -sL https://deb.nodesource.com/setup_12.x | bash -
-          apt-get install nodejs --assume-yes --quiet
           apt-get update
+          apt-get install nodejs --assume-yes --quiet
           apt-get upgrade --assume-yes
           apt-get autoremove --assume-yes
           EOF
@@ -47,7 +46,7 @@ phases:
       - mount --rbind /dev tool_image/mount/dev/
       - |
           chroot tool_image/mount /bin/sh << "EOF"
-          apt-get install debhelper devscripts dh-systemd --assume-yes --quiet
+          apt-get install debhelper devscripts dh-systemd npm --assume-yes --quiet
           cd munchii_daemon_source
           npm install
           npm run package
