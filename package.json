@@ -11,7 +11,7 @@
     "@aws-cdk/aws-codebuild": "1.22.0",
     "@aws-cdk/core": "1.22.0",
     "@types/node": "12.12.14",
-    "aws-cdk": "1.22.0",
+    "aws-cdk": "1.174.0",
     "source-map-support": "0.5.16",
     "typescript": "3.7.2"
   }
